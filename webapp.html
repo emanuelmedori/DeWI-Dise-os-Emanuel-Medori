@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Product Customizer</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #canvas-container {
+      margin: 20px auto;
+      width: 400px;
+      border: 2px dashed #ccc;
+      background: white;
+    }
+
+    button,
+    input[type="file"] {
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Customize Your Product</h1>
+
+  <input type="file" id="upload" accept="image/*" />
+
+  <div id="canvas-container">
+    <canvas id="canvas" width="400" height="400"></canvas>
+  </div>
+
+  <script>
+    const canvas = new fabric.Canvas('canvas');
+
+    let productLayer = null;
+    let shadowLayer = null;
+
+    const printArea = {
+      left: 115,
+      top: 195,
+      width: 165,
+      height: 135
+    };
+
+    const printAreaOutline = new fabric.Rect({
+      left: printArea.left,
+      top: printArea.top,
+      width: printArea.width,
+      height: printArea.height,
+      fill: 'transparent',
+      stroke: 'transparent',
+      strokeDashArray: [6, 6],
+      selectable: false,
+      evented: false
+    });
+
+    function keepOverlayOrder() {
+      if (productLayer) {
+        canvas.bringToFront(productLayer);
+      }
+      if (shadowLayer) {
+        canvas.bringToFront(shadowLayer);
+      }
+      canvas.bringToFront(printAreaOutline);
+      canvas.renderAll();
+    }
+
+    // Load product image
+    fabric.Image.fromURL('assets/product.png', function(img) {
+      productLayer = img;
+      img.scaleToWidth(canvas.width);
+      img.set({
+        left: 0,
+        top: 0,
+        selectable: false,
+        evented: false
+      });
+
+      canvas.add(img);
+      keepOverlayOrder();
+    });
+
+    // Load shadow image
+    fabric.Image.fromURL('assets/shadow.png', function(img) {
+      shadowLayer = img;
+      img.scaleToWidth(canvas.width);
+      img.set({
+        left: 0,
+        top: 0,
+        selectable: false,
+        evented: false,
+        opacity: 0.7
+      });
+
+      canvas.add(img);
+      keepOverlayOrder();
+    });
+
+    // Add visible print area guide
+    canvas.add(printAreaOutline);
+    keepOverlayOrder();
+
+    // Upload image
+    document.getElementById('upload').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        fabric.Image.fromURL(event.target.result, function(img) {
+          // Scale image to fit inside print area
+          img.scaleToWidth(printArea.width);
+
+          if (img.getScaledHeight() > printArea.height) {
+            img.scaleToHeight(printArea.height);
+          }
+
+          img.set({
+            left: printArea.left,
+            top: printArea.top,
+            originX: 'left',
+            originY: 'top',
+            opacity: 0.95
+          });
+
+          // Clip uploaded image so it stays inside print area
+          img.clipPath = new fabric.Rect({
+            left: printArea.left,
+            top: printArea.top,
+            width: printArea.width,
+            height: printArea.height,
+            absolutePositioned: true
+          });
+
+          canvas.add(img);
+          canvas.setActiveObject(img);
+          keepOverlayOrder();
+        });
+      };
+
+      reader.readAsDataURL(file);
+    });
+  </script>
+
+</body>
+</html>
